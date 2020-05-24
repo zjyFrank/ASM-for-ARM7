@@ -1,5 +1,6 @@
 .arm
 .text
+@方法1
 @.extern myRandom  @调用c,用来生成伪随机数(1-m)
 @--------------------------------
 @   #include "stdlib.h"
@@ -10,6 +11,10 @@
 @--------------------------------
 @ cmd : arm-uclinuxeabi-gcc.exe -Wall -S -mcpu=arm7tdmi myRandom.c
 
+@方法2
+@调用SWI SWI_GetTicks获取当前时间，作为伪随机数，然后取模
+
+@ 常量声明
 .equ column,40
 .equ row,15
 .equ edge,'*'
@@ -27,12 +32,11 @@
 .equ BLUE_KEY_06, 0x40      @button(6)
 .equ SWI_GetTicks, 0x6d     @获取当前时间
 
-
 @ clear screen
     SWI 0x206
 
 @打印地图
-@---------------------------
+@------------------------------------------------
 Draw_map:
     @ top
     Draw_1st_line:
@@ -73,9 +77,10 @@ Draw_map:
         SUBS r3,r3,#1
         BNE Draw_column
     MOV pc,lr
-@-----------------------------
+@------------------------------------------------
 
 @初始化
+@------------------------------------------------
 Init:
     MOV r4,#right   @ r4:direction
     MOV r5,#10      @ r5:sheadx
@@ -97,7 +102,7 @@ Init:
         SWI 0x207
         SUBS r9,r9,#1
         BNE Init_body 
-    @打印shead坐标
+    @打印head坐标
     MOV r0,#2
     MOV r1,#14
     LDR r2,=Message2
@@ -134,7 +139,8 @@ Init:
     SWI 0x204
 
     BL Creat_food
-    
+@---------------------------------------------------------------
+
 @主循环
 @---------------------------------------------------------------    
     MOV r9,#3
@@ -149,17 +155,20 @@ Main_loop:
     Update_tail:
         MOV r1,#4
         MUL r0,r9,r1        @ r0 = r9 * 4
-        ADD r7,r7,r0        @ r7 指向待伸长的蛇尾坐标x
-        ADD r8,r8,r0        @ r7 指向待伸长的蛇尾坐标y
-        @STMFD sp!,{r7,r8}   @ r7,r8入栈
-        LDR r0,[r7,#-4]     @ r0 = 当前蛇尾坐标x
-        LDR r1,[r8,#-4]     @ r1 = 当前蛇尾坐标y
-        STR r0,[r7]         @ 更新待伸长的蛇尾坐标x = 当前蛇尾坐标x
-        STR r1,[r8]         @ 更新待伸长的蛇尾坐标y = 当前蛇尾坐标y
-        SUB r7,r7,#4        @ r7 指向当前蛇尾坐标x
-        SUB r8,r8,#4        @ r8 指向当前蛇尾坐标y
-        MOV r2,#blank       @ 删除当前蛇尾
+        ADD r7,r7,r0        @ r7 指向前一蛇尾x坐标
+        ADD r8,r8,r0        @ r8 指向前一蛇尾y坐标
+        LDR r0,[r7,#-4]     @ r0 = 当前蛇尾x坐标
+        LDR r1,[r8,#-4]     @ r1 = 当前蛇尾y坐标
+        STR r0,[r7]         @ 更新前一蛇尾x坐标 = 当前蛇尾x坐标
+        STR r1,[r8]         @ 更新前一蛇尾y坐标 = 当前蛇尾y坐标
+        
+        @若未吃到食物,delete当前蛇尾
+        @否则, not delete(等效于伸长)
+        MOV r2,#blank       
         SWI 0x207
+
+        SUB r7,r7,#4        @ r7 指向更新后当前蛇尾x坐标
+        SUB r8,r8,#4        @ r8 指向更新后当前蛇尾y坐标
         
     @旧头 H 更换为身体 O
     Oldhead_to_body:
@@ -279,7 +288,7 @@ B Main_loop
 @--------------------------------MAIN END---------------------------
 
 @--------------------------------FUNCTION---------------------------
-@生成食物子函数
+@生成食物 Func
 Creat_food:
     @生成伪随机数
     Creat_rand:
@@ -321,7 +330,7 @@ Creat_food:
 MOV pc,lr
 
     
-@延时子函数
+@延时 Func
 Delay:
     MOV r3,#0x1  @时长
 Delay_loop:
@@ -340,10 +349,6 @@ Delay_loop:
     CMP r0,#0
     BNE Update_tail
 
-@    SWI 0x202
-@    CMP r0,#0x02
-@    ADDEQ r9,r9,#1
-
     SUBS r3,r3,#1
     BNE Delay_loop
 MOV pc,lr
@@ -352,22 +357,22 @@ MOV pc,lr
 Key:
     @up键按下
     key_up:
-        SUB r6,r6,#1    @ sheady-1
+        SUB r6,r6,#1    @ y-1
         B Draw
 
     @down键按下
     key_down:
-        ADD r6,r6,#1
+        ADD r6,r6,#1    @ y+1
         B Draw
 
     @left键按下
     key_left:
-        SUB r5,r5,#1
+        SUB r5,r5,#1    @ x-1
         B Draw
 
     @right键按下
     key_right:
-        ADD r5,r5,#1
+        ADD r5,r5,#1    @ x+1
         B Draw
 
 @游戏结束
