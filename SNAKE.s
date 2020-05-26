@@ -1,5 +1,6 @@
 .arm
 .text
+
 @方法1
 @.extern myRandom  @调用c,用来生成伪随机数(1-m)
 @--------------------------------
@@ -219,6 +220,7 @@ Main_loop:
     Judge_foody:
         LDR r1,[r1]
         CMP r6,r1
+    Update_len:
         ADDEQ r9,r9,#1      @蛇长+1
         BLEQ Creat_food     @产生新的食物
     next1:
@@ -259,6 +261,7 @@ Main_loop:
     MOV r2,r9
     SUB r2,r2,#1    @ r2 循环次数
     Touch_body:
+        Judge_x:
             LDR r0,[r7]
             CMP r5,r0
             BEQ Judge_y
@@ -275,14 +278,15 @@ Main_loop:
         BNE Touch_body
 
     @撞墙判断
-    CMP r5,#0
-    BEQ Game_over
-    CMP r5,#39
-    BEQ Game_over
-    CMP r6,#0
-    BEQ Game_over
-    CMP r6,#14
-    BEQ Game_over
+    Touch_wall:
+        CMP r5,#0
+        BEQ Game_over
+        CMP r5,#39
+        BEQ Game_over
+        CMP r6,#0
+        BEQ Game_over
+        CMP r6,#14
+        BEQ Game_over
 
 B Main_loop
 @--------------------------------MAIN END---------------------------
@@ -297,13 +301,13 @@ Creat_food:
         MOV r1,r0
         @ 取模
         Modx:
-            CMP r1,#37
+            CMP r1,#37      @生成0-37
             BLS Randx
-            SUBHI r1,r1,#38
+            SUBHI r1,r1,#38 @大于38则一直减
             B Modx
         
         Randx:
-            ADD r1,r1,#1
+            ADD r1,r1,#1    @生成1-38
             STMFD sp!,{r1}
 
         SWI SWI_GetTicks    @获取当前时间，作为伪随机数
@@ -311,12 +315,12 @@ Creat_food:
         MOV r1,r0
         @ 取模
         Mody:
-            CMP r1,#12
+            CMP r1,#12      @生成0-12
             BLS Randy
             SUBHI r1,r1,#13
             B Mody
         Randy:
-            ADD r1,r1,#1    @ r1
+            ADD r1,r1,#1    @ r1 生成1-13
             LDMFD sp!,{r0}  @ r0
 
     LDR r2,=foodx
@@ -328,8 +332,7 @@ Creat_food:
     MOV r2,#food
     SWI 0x207
 MOV pc,lr
-
-    
+  
 @延时 Func
 Delay:
     MOV r3,#0x1  @时长
