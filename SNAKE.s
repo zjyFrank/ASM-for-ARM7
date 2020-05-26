@@ -82,7 +82,7 @@ Draw_map:
 
 @初始化
 @------------------------------------------------
-Init:
+Init:               @ r0-r3:assign as required
     MOV r4,#right   @ r4:direction
     MOV r5,#10      @ r5:sheadx
     MOV r6,#7       @ r6:sheady
@@ -179,7 +179,7 @@ Main_loop:
         SWI 0x207
 
     @更新body数组
-    STMFD sp!,{r9}
+    STMFD sp!,{r9}          @保存蛇body长度
     SUB r9,r9,#1
     Update_body:
         LDR r0,[r7,#-4]
@@ -335,7 +335,7 @@ MOV pc,lr
   
 @延时 Func
 Delay:
-    MOV r3,#0x1  @时长
+    MOV r3,#0x100  @时长
 Delay_loop:
     SWI 0x203       @轮询(查询)
     @判断按键
