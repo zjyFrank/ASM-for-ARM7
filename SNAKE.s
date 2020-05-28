@@ -335,7 +335,7 @@ MOV pc,lr
   
 @延时 Func
 Delay:
-    MOV r3,#0x100  @时长
+    MOV r3,#0x100  @时长 
 Delay_loop:
     SWI 0x203       @轮询(查询)
     @判断按键
